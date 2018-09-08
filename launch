@@ -1,0 +1,9 @@
+#!/bin/sh
+
+set -e
+
+cmake .
+
+make
+
+DISPLAY=:0 LIBGL_ALWAYS_INDIRECT=1 ./chess

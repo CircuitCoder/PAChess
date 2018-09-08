@@ -1,8 +1,11 @@
 #include <QApplication>
-
-#include "proto/msg.pb.h"
+#include "frame/frame.h"
 
 int main(int argc, char **argv) {
   QApplication app(argc, argv);
+
+  Frame frame;
+  frame.show();
+
   return app.exec();
 }

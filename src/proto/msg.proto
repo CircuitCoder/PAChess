@@ -39,6 +39,7 @@ message Sync {
   oneof sync {
     Call call = 1;
     Board board = 2;
+    Side turn = 3;
   }
 }
 

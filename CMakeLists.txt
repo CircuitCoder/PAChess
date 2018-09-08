@@ -9,7 +9,7 @@ set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTOUIC ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-find_package(Qt5 COMPONENTS Core Widgets Network REQUIRED)
+find_package(Qt5 COMPONENTS Core Widgets Network Svg REQUIRED)
 find_package(Threads REQUIRED)
 find_package(Protobuf REQUIRED)
 
@@ -21,4 +21,4 @@ file(GLOB_RECURSE HDR_LIST src/*.h)
 include_directories(src)
 add_executable(chess ${SRC_LIST} ${HDR_LIST})
 
-target_link_libraries(chess Qt5::Core Qt5::Widgets Qt5::Network Threads::Threads ${Protobuf_LIBRARIES} proto)
+target_link_libraries(chess Qt5::Core Qt5::Widgets Qt5::Network Qt5::Svg Threads::Threads ${Protobuf_LIBRARIES} proto)
