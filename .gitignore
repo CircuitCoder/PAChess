@@ -1,0 +1,9 @@
+CMakeFiles/
+*_autogen/
+*.a
+*.cmake
+Makefile
+CMakeCache.txt
+chess
+.vscode
+compile_commands.json

@@ -1,0 +1,4 @@
+*
+!*.proto
+!CMakeLists.txt
+!.gitignore
