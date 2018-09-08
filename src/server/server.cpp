@@ -15,6 +15,7 @@ Server::Server(quint16 port, int timeout) {
   this->timer->setInterval(timeout * 1000);
 
   this->localSide = RED;
+  this->currentSide = RED;
 
   // TODO: setup board
 }
@@ -65,6 +66,9 @@ Response Server::apply(Request req, Side side) {
     
     this->syncBoard();
 
+    this->currentSide = negateSide(this->currentSide);
+    this->syncSide();
+
     resp.set_success(true);
     return resp;
   }
@@ -85,6 +89,14 @@ void Server::syncBoard() {
 void Server::call(Call call) {
   Sync sync;
   *sync.mutable_call() = call;
+  emit localSync(sync);
+  // TODO: remote sync
+}
+
+void Server::syncSide() {
+  Sync sync;
+  sync.set_side(this->currentSide);
+  
   emit localSync(sync);
   // TODO: remote sync
 }

@@ -22,10 +22,13 @@ class Server : QWidget {
     QTimer *timer;
     std::vector<Piece> board;
     Side localSide;
+    Side currentSide;
+    bool started = false;
 
     std::shared_mutex boardMutex;
 
     Response apply(Request req, Side side);
     void syncBoard();
+    void syncSide();
     void call(Call call);
 };
