@@ -269,7 +269,7 @@ vector<pair<int, int>> BoardWidget::query(Piece p) {
 
     for(int i = y+1; i <= 9; ++i)
       if(!freeAt(x, i)) {
-        for(int j = i+1; j <= 0; ++j)
+        for(int j = i+1; j <= 9; ++j)
           if(enemyAt(x, j)) {
             result.push_back({ x, j });
             break;

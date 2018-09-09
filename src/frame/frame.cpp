@@ -94,6 +94,16 @@ Frame::Frame() : QMainWindow() {
   sidebar->addWidget(status);
 
   auto resign = new QPushButton("Resign");
+  connect(resign, &QPushButton::clicked, [this]() {
+    Request req;
+    *req.mutable_resign() = Resign();
+    if(this->local) {
+      if(this->server == nullptr) return;
+      this->server->localApply(req);
+    } else {
+      this->remote->write(QByteArray::fromStdString(req.SerializeAsString()));
+    }
+  });
   sidebar->addWidget(resign);
 
   auto load = new QPushButton("Load");
@@ -174,8 +184,42 @@ Frame::Frame() : QMainWindow() {
 }
 
 void Frame::processSync(Sync s) {
-  if(s.has_call()) ; // TODO: process call
-  else if(s.has_board()) {
+  if(s.has_call()) {
+    auto call = s.call();
+
+    auto msg = new QMessageBox();
+
+    if(call.winner() == this->side) {
+      if(call.cause() == Call::RESIGN)
+        msg->setText("You WIN! Your opposite resigned!");
+      else if(call.cause() == Call::CHECKMATE)
+        msg->setText("You WIN! Your opposite has been checkmate!");
+      else
+        msg->setText("You WIN! Your opposite timed out!");
+
+      this->status->setText("You win");
+    } else {
+      if(call.cause() == Call::RESIGN)
+        msg->setText("You LOSE! You resigned!");
+      else if(call.cause() == Call::CHECKMATE)
+        msg->setText("You LOSE! You have been checkmate!");
+      else
+        msg->setText("You LOSE! You timed out!");
+
+      this->status->setText("You lose");
+    }
+    msg->setModal(true);
+    msg->show();
+
+    connect(msg, &QMessageBox::buttonClicked, [msg]() {
+      delete msg;
+    });
+
+    if(this->local) this->server->close();
+    else this->remote->close();
+
+    this->board->setMovable(false);
+  } else if(s.has_board()) {
     this->board->updateBoard(s.board());
     qDebug()<<"Board";
   } else {
