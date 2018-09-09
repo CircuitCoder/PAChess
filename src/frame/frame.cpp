@@ -7,6 +7,7 @@
 #include <QMenuBar>
 #include <QLCDNumber>
 #include <QTcpSocket>
+#include <QInputDialog>
 
 Board defaultBoard() {
   Board b;
@@ -148,13 +149,18 @@ Frame::Frame() : QMainWindow() {
     this->board->setSide(BLACK);
     this->side = BLACK;
     this->remote = new QTcpSocket(this);
-    this->remote->connectToHost("localhost", 5858); // TODO: changeme
+
+    bool ok;
+    auto host = QInputDialog::getText(this, "Input the host", "host", QLineEdit::Normal, "localhost", &ok);
+    if(!ok) return;
+    auto port = QInputDialog::getInt(this, "Input the port", "port", 5858, 0, 32768, 1, &ok);
+    if(!ok) return;
+
+    this->remote->connectToHost(host, port);
     connect(this->remote, &QTcpSocket::connected, [this]() {
-      /*
       QMessageBox msg;
       msg.setText("Connected");
       msg.exec();
-      */
     });
 
     connect(this->remote, &QTcpSocket::readyRead, [this]() {
