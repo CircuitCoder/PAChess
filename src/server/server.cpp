@@ -64,6 +64,15 @@ Response Server::apply(Request req, Side side) {
     Response resp;
     resp.set_success(true);
     return resp;
+  } else if(req.has_upload()) {
+    Board init = req.upload();
+    board.clear();
+    for(int i = 0; i<init.pieces_size(); ++i)
+      board.push_back(init.pieces(i));
+    this->syncBoard();
+    Response resp;
+    resp.set_success(true);
+    return resp;
   } else {
     // Movement
     const auto movement = req.movement();

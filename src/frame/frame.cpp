@@ -7,6 +7,84 @@
 #include <QMenuBar>
 #include <QTcpSocket>
 #include <QInputDialog>
+#include <QFileDialog>
+#include <iostream>
+#include <fstream>
+
+using namespace std;
+
+void filterOutput(ostream &s, Board &b, Side side, Piece::Type type) {
+  int counter = 0;
+  for(int i = 0; i<b.pieces_size(); ++i) {
+    auto piece = b.pieces(i);
+    if(piece.side() == side && piece.type() == type) ++counter;
+  }
+
+  s<<counter<<" ";
+  for(int i = 0; i<b.pieces_size(); ++i) {
+    auto piece = b.pieces(i);
+    if(piece.side() == side && piece.type() == type) {
+      --counter;
+      s<<"<"<<piece.x()<<","<<9-piece.y()<<">";
+      if(counter != 0) s<<" ";
+      else s<<endl;
+    }
+  }
+}
+
+ostream& operator<<(ostream &s, Board b) {
+  s<<"red"<<endl;
+  filterOutput(s, b, RED, Piece::GENERAL);
+  filterOutput(s, b, RED, Piece::ADVISOR);
+  filterOutput(s, b, RED, Piece::ELEPHANT);
+  filterOutput(s, b, RED, Piece::HORSE);
+  filterOutput(s, b, RED, Piece::CHARIOT);
+  filterOutput(s, b, RED, Piece::CANNON);
+  filterOutput(s, b, RED, Piece::SOLDIER);
+  s<<"black"<<endl;
+  filterOutput(s, b, BLACK, Piece::GENERAL);
+  filterOutput(s, b, BLACK, Piece::ADVISOR);
+  filterOutput(s, b, BLACK, Piece::ELEPHANT);
+  filterOutput(s, b, BLACK, Piece::HORSE);
+  filterOutput(s, b, BLACK, Piece::CHARIOT);
+  filterOutput(s, b, BLACK, Piece::CANNON);
+  filterOutput(s, b, BLACK, Piece::SOLDIER);
+  return s;
+}
+
+void filterInput(istream &s, Board &b, Side side, Piece::Type type) {
+  int count;
+  s>>count;
+  for(int i = 0; i<count; ++i) {
+    string buf;
+    s>>buf;
+    int x = buf[1] - '0';
+    int y = buf[3] - '0';
+
+    auto p = b.add_pieces();
+    p->set_x(x);
+    p->set_y(9-y);
+    p->set_side(side);
+    p->set_type(type);
+  }
+}
+
+istream& operator>>(istream &s, Board &b) {
+  for(int i = 0; i<2; ++i) {
+    string color;
+    s>>color;
+    Side side = color == "red" ? RED : BLACK;
+
+    filterInput(s, b, side, Piece::GENERAL);
+    filterInput(s, b, side, Piece::ADVISOR);
+    filterInput(s, b, side, Piece::ELEPHANT);
+    filterInput(s, b, side, Piece::HORSE);
+    filterInput(s, b, side, Piece::CHARIOT);
+    filterInput(s, b, side, Piece::CANNON);
+    filterInput(s, b, side, Piece::SOLDIER);
+  }
+  return s;
+}
 
 Board defaultBoard() {
   Board b;
@@ -114,9 +192,27 @@ Frame::Frame() : QMainWindow() {
 
   auto load = new QPushButton("Load");
   sidebar->addWidget(load);
+  connect(load , &QPushButton::clicked, [this]() {
+    auto fn = QFileDialog::getOpenFileName(this, "Open Save...", "save.txt");
+    ifstream fis(fn.toStdString());
+
+    Request req;
+    fis>>*req.mutable_upload();
+    if(this->local) {
+      if(this->server == nullptr) return;
+      this->server->localApply(req);
+    } else {
+      this->remote->write(QByteArray::fromStdString(req.SerializeAsString()));
+    }
+  });
 
   auto save = new QPushButton("Save");
   sidebar->addWidget(save);
+  connect(save, &QPushButton::clicked, [this]() {
+    auto fn = QFileDialog::getSaveFileName(this, "Save To...", "save.txt");
+    ofstream fos(fn.toStdString());
+    fos<<this->board->getBoard();
+  });
 
   main->addLayout(sidebar, 1);
 

@@ -352,3 +352,7 @@ void BoardWidget::initMove(int i, pair<int, int> to) {
 
   emit move(m);
 }
+
+Board BoardWidget::getBoard() {
+  return b;
+}

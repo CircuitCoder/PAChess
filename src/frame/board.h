@@ -12,6 +12,7 @@ class BoardWidget : public QWidget {
 
   public:
     BoardWidget(QWidget *parent = nullptr);
+    Board getBoard();
 
   signals:
     void move(Movement movement);
