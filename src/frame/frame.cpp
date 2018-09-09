@@ -158,7 +158,11 @@ Frame::Frame() : QMainWindow() {
       if(this->server == nullptr) return;
       this->server->localApply(req);
     } else {
-      this->remote->write(QByteArray::fromStdString(req.SerializeAsString()));
+      auto array = QByteArray::fromStdString(req.SerializeAsString());
+      short len = array.length();
+      this->remote->putChar(len & 0xFF);
+      this->remote->putChar(len >> 8);
+      this->remote->write(array);
     }
   });
 
@@ -185,7 +189,11 @@ Frame::Frame() : QMainWindow() {
       if(this->server == nullptr) return;
       this->server->localApply(req);
     } else {
-      this->remote->write(QByteArray::fromStdString(req.SerializeAsString()));
+      auto array = QByteArray::fromStdString(req.SerializeAsString());
+      short len = array.length();
+      this->remote->putChar(len & 0xFF);
+      this->remote->putChar(len >> 8);
+      this->remote->write(array);
     }
   });
   sidebar->addWidget(resign);
@@ -202,7 +210,11 @@ Frame::Frame() : QMainWindow() {
       if(this->server == nullptr) return;
       this->server->localApply(req);
     } else {
-      this->remote->write(QByteArray::fromStdString(req.SerializeAsString()));
+      auto array = QByteArray::fromStdString(req.SerializeAsString());
+      short len = array.length();
+      this->remote->putChar(len & 0xFF);
+      this->remote->putChar(len >> 8);
+      this->remote->write(array);
     }
   });
 
@@ -275,9 +287,26 @@ Frame::Frame() : QMainWindow() {
     });
 
     connect(this->remote, &QTcpSocket::readyRead, [this]() {
-      Sync s;
-      s.ParseFromString(this->remote->readAll().toStdString());
-      this->processSync(s);
+      while(true) {
+        qDebug()<<"Left:"<<this->remote->bytesAvailable();
+        if(this->remote->bytesAvailable() < 2) return;
+        unsigned char high, low;
+        this->remote->getChar((char*) &low);
+        this->remote->getChar((char*) &high);
+        int count = ((int)high) << 8 | low;
+        if(this->remote->bytesAvailable() < count) {
+          this->remote->ungetChar(high);
+          this->remote->ungetChar(low);
+          return;
+        }
+
+        qDebug()<<"RECV:"<<count;
+
+        auto data = this->remote->QIODevice::read(count);
+        Sync s;
+        s.ParseFromString(data.toStdString());
+        this->processSync(s);
+      }
     });
   });
   connMenu->addAction(connAct);

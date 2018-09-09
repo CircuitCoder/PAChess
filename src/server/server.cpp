@@ -36,10 +36,25 @@ Server::Server(quint16 port, int timeout, Board init) {
     this->remote = this->server->nextPendingConnection();
 
     connect(this->remote, &QTcpSocket::readyRead, [this]() {
-      auto data = this->remote->readAll();
-      Request req;
-      req.ParseFromString(data.toStdString());
-      this->apply(req, negateSide(this->localSide));
+      while(true) {
+        if(this->remote->QIODevice::bytesAvailable() < 2) return;
+        unsigned char high, low;
+        this->remote->getChar((char*) &low);
+        this->remote->getChar((char*) &high);
+        int count = ((int) high) << 8 | low;
+        if(this->remote->bytesAvailable() < count) {
+          this->remote->ungetChar(high);
+          this->remote->ungetChar(low);
+          return;
+        }
+
+        qDebug()<<"RECV:"<<count;
+
+        auto data = this->remote->QIODevice::read(count);
+        Request req;
+        req.ParseFromString(data.toStdString());
+        this->apply(req, negateSide(this->localSide));
+      }
     });
 
     this->syncBoard();
@@ -146,7 +161,12 @@ void Server::syncSide() {
 
 void Server::remoteSync(Sync sync) {
   if(!this->remote) return;
-  string str = sync.SerializeAsString();
-  this->remote->write(QByteArray::fromStdString(str));
-  this->remote->flush();
+  auto array = QByteArray::fromStdString(sync.SerializeAsString());
+  short len = array.length();
+  qDebug()<<"SEND:"<<len;
+  unique_lock<shared_mutex> lock(this->networkMutex);
+  this->remote->putChar(len & 0xFF);
+  this->remote->putChar(len >> 8);
+  qDebug()<<"SPLIT:"<<(len & 0xFF)<<(len>>8);
+  this->remote->write(array);
 }

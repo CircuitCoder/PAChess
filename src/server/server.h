@@ -29,6 +29,7 @@ class Server : public QWidget {
     bool started = false;
 
     std::shared_mutex boardMutex;
+    std::shared_mutex networkMutex;
 
     Response apply(Request req, Side side);
     void call(Call call);
