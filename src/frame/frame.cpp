@@ -202,6 +202,7 @@ Frame::Frame() : QMainWindow() {
   sidebar->addWidget(load);
   connect(load , &QPushButton::clicked, [this]() {
     auto fn = QFileDialog::getOpenFileName(this, "Open Save...", "save.txt");
+    if(fn == "") return;
     ifstream fis(fn.toStdString());
 
     Request req;
