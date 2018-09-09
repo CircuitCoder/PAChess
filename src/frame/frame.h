@@ -2,6 +2,7 @@
 
 #include <QMainWindow>
 #include <QLabel>
+#include <QMessageBox>
 #include "server/server.h"
 #include "board.h"
 
@@ -14,7 +15,13 @@ class Frame : public QMainWindow {
 
   private:
     Server *server = nullptr;
+    QTcpSocket *remote = nullptr;
     BoardWidget *board;
     QLabel *status;
     Side side;
+    bool local;
+    bool waiting = false;
+    QMessageBox *waitingHint;
+
+    void processSync(Sync sync);
 };

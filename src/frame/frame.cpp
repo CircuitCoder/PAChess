@@ -6,6 +6,7 @@
 #include <QPushButton>
 #include <QMenuBar>
 #include <QLCDNumber>
+#include <QTcpSocket>
 
 Board defaultBoard() {
   Board b;
@@ -70,11 +71,14 @@ Frame::Frame() : QMainWindow() {
   main->addWidget(board);
 
   connect(this->board, &BoardWidget::move, [this](Movement m) {
-    qDebug()<<"Move";
-    if(this->server == nullptr) return;
     Request req;
     *req.mutable_movement() = m;
-    this->server->localApply(req);
+    if(this->local) {
+      if(this->server == nullptr) return;
+      this->server->localApply(req);
+    } else {
+      this->remote->write(QByteArray::fromStdString(req.SerializeAsString()));
+    }
   });
 
   auto sidebar = new QBoxLayout(QBoxLayout::TopToBottom);
@@ -94,6 +98,9 @@ Frame::Frame() : QMainWindow() {
   auto load = new QPushButton("Load");
   sidebar->addWidget(load);
 
+  auto save = new QPushButton("Save");
+  sidebar->addWidget(save);
+
   main->addLayout(sidebar, 1);
 
   auto container = new QWidget(this);
@@ -103,21 +110,71 @@ Frame::Frame() : QMainWindow() {
 
   auto connMenu = menuBar()->addMenu("Connection");
   auto newServerAct = new QAction("New &Server");
+
   connect(newServerAct, &QAction::triggered, [this]() {
+    this->local = true;
+    this->board->setSide(RED);
+    this->side = RED;
+    this->waiting = true;
+    this->waitingHint = new QMessageBox();
+    this->waitingHint->setText("Waiting for the other player...");
+    this->waitingHint->setStandardButtons(QMessageBox::Cancel);
+    this->waitingHint->setModal(true);
+    this->waitingHint->show();
+    connect(this->waitingHint, &QMessageBox::buttonClicked, [this]() {
+      this->server->close();
+      delete this->server;
+      this->server = nullptr;
+    });
+
     this->server = new Server(5858, 60, defaultBoard());
     connect(this->server, &Server::localSync, [this](Sync s) {
-      // TODO: handle call
-      if(s.has_call()) ;
-      else if(s.has_board()) this->board->updateBoard(s.board());
-      else {
-        this->board->setMovable(this->side == s.side());
-        if(s.side() == RED) this->status->setText("Red moves");
-        else this->status->setText("Black moves");
+      if(this->waiting) {
+        this->waiting = false;
+        this->waitingHint->hide();
+        delete this->waitingHint;
+        this->waitingHint = nullptr;
       }
+
+      this->processSync(s);
     });
     qDebug()<<"first sync";
-    this->server->syncBoard();
-    this->server->syncSide();
   });
   connMenu->addAction(newServerAct);
+
+  auto connAct = new QAction("&Connect");
+  connect(connAct, &QAction::triggered, [this]() {
+    this->local = false;
+    this->board->setSide(BLACK);
+    this->side = BLACK;
+    this->remote = new QTcpSocket(this);
+    this->remote->connectToHost("localhost", 5858); // TODO: changeme
+    connect(this->remote, &QTcpSocket::connected, [this]() {
+      /*
+      QMessageBox msg;
+      msg.setText("Connected");
+      msg.exec();
+      */
+    });
+
+    connect(this->remote, &QTcpSocket::readyRead, [this]() {
+      qDebug()<<"Receive";
+      Sync s;
+      s.ParseFromString(this->remote->readAll().toStdString());
+      this->processSync(s);
+    });
+  });
+  connMenu->addAction(connAct);
+}
+
+void Frame::processSync(Sync s) {
+  if(s.has_call()) ; // TODO: process call
+  else if(s.has_board()) {
+    this->board->updateBoard(s.board());
+    qDebug()<<"Board";
+  } else {
+    this->board->setMovable(this->side == s.side());
+    if(s.side() == RED) this->status->setText("Red moves");
+    else this->status->setText("Black moves");
+  }
 }

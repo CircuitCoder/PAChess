@@ -21,6 +21,7 @@ class Server : public QWidget {
 
   private:
     QTcpServer *server;
+    QTcpSocket *remote = nullptr;
     QTimer *timer;
     std::vector<Piece> board;
     Side localSide;
@@ -31,4 +32,5 @@ class Server : public QWidget {
 
     Response apply(Request req, Side side);
     void call(Call call);
+    void remoteSync(Sync sync);
 };

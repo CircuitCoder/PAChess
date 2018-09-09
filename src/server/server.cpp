@@ -1,5 +1,7 @@
 #include "server.h"
 
+#include <QTcpSocket>
+
 using namespace std;
 
 Side negateSide(Side s) {
@@ -19,6 +21,20 @@ Server::Server(quint16 port, int timeout, Board init) {
 
   for(int i = 0; i<init.pieces_size(); ++i)
     board.push_back(init.pieces(i));
+  
+  connect(this->server, &QTcpServer::newConnection, [this]() {
+    this->remote = this->server->nextPendingConnection();
+
+    connect(this->remote, &QTcpSocket::readyRead, [this]() {
+      auto data = this->remote->readAll();
+      Request req;
+      req.ParseFromString(data.toStdString());
+      this->apply(req, negateSide(this->localSide));
+    });
+
+    this->syncBoard();
+    this->syncSide();
+  });
 }
 
 Response Server::localApply(Request req) {
@@ -90,14 +106,14 @@ void Server::syncBoard() {
   qDebug()<<"Emitting";
   
   emit localSync(sync);
-  // TODO: remote sync
+  this->remoteSync(sync);
 }
 
 void Server::call(Call call) {
   Sync sync;
   *sync.mutable_call() = call;
   emit localSync(sync);
-  // TODO: remote sync
+  this->remoteSync(sync);
 }
 
 void Server::syncSide() {
@@ -105,7 +121,15 @@ void Server::syncSide() {
   sync.set_side(this->currentSide);
   
   emit localSync(sync);
-  // TODO: remote sync
+  this->remoteSync(sync);
+}
+
+void Server::remoteSync(Sync sync) {
+  if(!this->remote) return;
+  qDebug()<<"Sending...";
+  string str = sync.SerializeAsString();
+  this->remote->write(QByteArray::fromStdString(str));
+  this->remote->flush();
 }
 
 // TODO: timeout
