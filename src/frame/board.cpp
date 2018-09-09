@@ -141,9 +141,21 @@ vector<pair<int, int>> BoardWidget::query(Piece p) {
     int yub = p.side() == BLACK ? 2 : 9;
 
     if(x > 3 && !selfAt(x-1, y)) result.push_back({ x -1, y });
-    if(x < 5 && !selfAt(x+1, y)) result.push_back({ x -1, y });
+    if(x < 5 && !selfAt(x+1, y)) result.push_back({ x +1, y });
     if(y > ylb && !selfAt(x, y-1)) result.push_back({ x, y -1 });
     if(y < yub && !selfAt(x, y+1)) result.push_back({ x, y +1 });
+
+    for(int i = y+1; i<=9; ++i) {
+      if(freeAt(x, i)) continue;
+      else if(isEnemyGeneral(x, i)) result.push_back({ x, i });
+      else break;
+    }
+
+    for(int i = y-1; i>=0; --i) {
+      if(freeAt(x, i)) continue;
+      else if(isEnemyGeneral(x, i)) result.push_back({ x, i });
+      else break;
+    }
   } else if(p.type() == Piece::ADVISOR) {
     int x = p.x();
     int y = p.y();
@@ -239,6 +251,8 @@ vector<pair<int, int>> BoardWidget::query(Piece p) {
             break;
           } else if(selfAt(j, y)) break;
         break;
+      } else {
+        result.push_back({ i, y });
       }
 
     for(int i = x-1; i >= 0; --i)
@@ -249,6 +263,8 @@ vector<pair<int, int>> BoardWidget::query(Piece p) {
             break;
           } else if(selfAt(j, y)) break;
         break;
+      } else {
+        result.push_back({ i, y });
       }
 
     for(int i = y+1; i <= 9; ++i)
@@ -259,6 +275,8 @@ vector<pair<int, int>> BoardWidget::query(Piece p) {
             break;
           } else if(selfAt(x, j)) break;
         break;
+      } else {
+        result.push_back({ x, i });
       }
 
     for(int i = y-1; i >= 0; --i)
@@ -269,6 +287,8 @@ vector<pair<int, int>> BoardWidget::query(Piece p) {
             break;
           } else if(selfAt(x, j)) break;
         break;
+      } else {
+        result.push_back({ x, i });
       }
   } else {
     int x = p.x();
@@ -309,6 +329,15 @@ optional<Side> BoardWidget::sideAt(int x, int y) {
   }
 
   return {};
+}
+
+bool BoardWidget::isEnemyGeneral(int x, int y) {
+  for(int i = 0; i<this->b.pieces_size(); ++i) {
+    auto p = b.pieces(i);
+    if(p.x() == x && p.y() == y) return p.side() != this->side && p.type() == Piece::GENERAL;
+  }
+
+  return false;
 }
 
 void BoardWidget::initMove(int i, pair<int, int> to) {
