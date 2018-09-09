@@ -37,8 +37,10 @@ class BoardWidget : public QWidget {
     bool enemyAt(int x, int y);
     bool selfAt(int x, int y);
     bool isEnemyGeneral(int x, int y);
+    bool isOurGeneral(int x, int y);
     std::optional<Side> sideAt(int x, int y);
     void initMove(int i, std::pair<int, int>);
+    void warnIfChecked();
 
     std::vector<QLabel *> pieces;
 };

@@ -251,7 +251,6 @@ Frame::Frame() : QMainWindow() {
 
       this->processSync(s);
     });
-    qDebug()<<"first sync";
   });
   connMenu->addAction(newServerAct);
 
@@ -276,7 +275,6 @@ Frame::Frame() : QMainWindow() {
     });
 
     connect(this->remote, &QTcpSocket::readyRead, [this]() {
-      qDebug()<<"Receive";
       Sync s;
       s.ParseFromString(this->remote->readAll().toStdString());
       this->processSync(s);

@@ -43,6 +43,7 @@ BoardWidget::BoardWidget(QWidget *parent) : QWidget(parent) {
 
 void BoardWidget::updateBoard(Board board) {
   this->b = board;
+  this->warnIfChecked();
   this->updateWidgets();
 }
 
@@ -61,7 +62,6 @@ void BoardWidget::setSide(Side s) {
 }
 
 void BoardWidget::updateWidgets() {
-  qDebug()<<"Rearrange";
   for(auto label : this->pieces) {
     label->hide();
     delete label;
@@ -84,7 +84,6 @@ void BoardWidget::updateWidgets() {
     if(piece.side() == this->side && this->movable) {
       l->setCursor(Qt::CursorShape::PointingHandCursor);
       connect(l, &Clickable::clicked, [this, i]() {
-        qDebug()<<"Click";
         this->moving = i;
         this->updateWidgets();
       });
@@ -95,10 +94,8 @@ void BoardWidget::updateWidgets() {
   }
 
   if(this->moving != -1) {
-    qDebug()<<"Query";
     auto piece = this->b.pieces(this->moving);
     auto pos = query(piece);
-    qDebug()<<pos;
     for(auto p : pos) {
       auto &[x, y] = p;
       auto l = new Clickable(this);
@@ -340,6 +337,15 @@ bool BoardWidget::isEnemyGeneral(int x, int y) {
   return false;
 }
 
+bool BoardWidget::isOurGeneral(int x, int y) {
+  for(int i = 0; i<this->b.pieces_size(); ++i) {
+    auto p = b.pieces(i);
+    if(p.x() == x && p.y() == y) return p.side() == this->side && p.type() == Piece::GENERAL;
+  }
+
+  return false;
+}
+
 void BoardWidget::initMove(int i, pair<int, int> to) {
   auto p = b.pieces(i);
   Movement m;
@@ -355,4 +361,29 @@ void BoardWidget::initMove(int i, pair<int, int> to) {
 
 Board BoardWidget::getBoard() {
   return b;
+}
+
+inline
+Side negateSide(Side s) {
+  if(s == RED) return BLACK;
+  else return RED;
+}
+
+void BoardWidget::warnIfChecked() {
+  qDebug()<<"Checking...";
+  for(int i = 0; i<this->b.pieces_size(); ++i) {
+    auto p = b.pieces(i);
+    if(p.side() != this->side) {
+      qDebug()<<p.x()<<p.y();
+      this->side = negateSide(this->side);
+      auto pos = this->query(p);
+      this->side = negateSide(this->side);
+      qDebug()<<pos;
+      for(auto &[x, y] : pos) if(isOurGeneral(x, y)) {
+        qDebug()<<"Been Checked";
+        QApplication::beep();
+        return;
+      }
+    }
+  }
 }
