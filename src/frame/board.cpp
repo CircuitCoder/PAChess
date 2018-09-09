@@ -61,6 +61,7 @@ void BoardWidget::setSide(Side s) {
 }
 
 void BoardWidget::updateWidgets() {
+  qDebug()<<"Rearrange";
   for(auto label : this->pieces) {
     label->hide();
     delete label;
@@ -317,6 +318,8 @@ void BoardWidget::initMove(int i, pair<int, int> to) {
   m.set_from_y(p.y());
   m.set_to_x(to.first);
   m.set_to_y(to.second);
+
+  this->moving = -1;
 
   emit move(m);
 }

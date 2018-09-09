@@ -7,7 +7,7 @@ Side negateSide(Side s) {
   else return RED;
 }
 
-Server::Server(quint16 port, int timeout) {
+Server::Server(quint16 port, int timeout, Board init) {
   this->server = new QTcpServer(this);
   this->server->listen(QHostAddress::Any, port);
 
@@ -17,7 +17,8 @@ Server::Server(quint16 port, int timeout) {
   this->localSide = RED;
   this->currentSide = RED;
 
-  // TODO: setup board
+  for(int i = 0; i<init.pieces_size(); ++i)
+    board.push_back(init.pieces(i));
 }
 
 Response Server::localApply(Request req) {
@@ -64,6 +65,8 @@ Response Server::apply(Request req, Side side) {
         i->set_y(movement.to_y());
       }
     
+    lock.unlock();
+    
     this->syncBoard();
 
     this->currentSide = negateSide(this->currentSide);
@@ -79,8 +82,12 @@ void Server::syncBoard() {
   shared_lock<shared_mutex> lock(boardMutex);
   Board *b = sync.mutable_board();
 
+  qDebug()<<"Adding";
+
   for(const auto &piece : this->board)
     *b->add_pieces() = piece;
+
+  qDebug()<<"Emitting";
   
   emit localSync(sync);
   // TODO: remote sync

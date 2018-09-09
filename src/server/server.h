@@ -7,12 +7,14 @@
 #include <shared_mutex>
 #include "proto/msg.pb.h"
 
-class Server : QWidget {
+class Server : public QWidget {
   Q_OBJECT
 
   public:
-    Server(quint16 port, int timeout = 60);
+    Server(quint16 port, int timeout = 60, Board init = Board());
     Response localApply(Request req);
+    void syncBoard();
+    void syncSide();
 
   signals:
     void localSync(Sync sync);
@@ -28,7 +30,5 @@ class Server : QWidget {
     std::shared_mutex boardMutex;
 
     Response apply(Request req, Side side);
-    void syncBoard();
-    void syncSide();
     void call(Call call);
 };

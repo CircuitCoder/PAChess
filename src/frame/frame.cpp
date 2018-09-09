@@ -4,6 +4,7 @@
 
 #include <QBoxLayout>
 #include <QPushButton>
+#include <QMenuBar>
 #include <QLCDNumber>
 
 Board defaultBoard() {
@@ -63,11 +64,18 @@ Frame::Frame() : QMainWindow() {
   auto main = new QBoxLayout(QBoxLayout::LeftToRight);
   main->setSpacing(20);
 
-  auto board = new BoardWidget(this);
+  board = new BoardWidget(this);
   // TODO: connect
 
   main->addWidget(board);
-  board->updateBoard(defaultBoard());
+
+  connect(this->board, &BoardWidget::move, [this](Movement m) {
+    qDebug()<<"Move";
+    if(this->server == nullptr) return;
+    Request req;
+    *req.mutable_movement() = m;
+    this->server->localApply(req);
+  });
 
   auto sidebar = new QBoxLayout(QBoxLayout::TopToBottom);
   sidebar->setAlignment(Qt::AlignTop);
@@ -75,6 +83,10 @@ Frame::Frame() : QMainWindow() {
 
   auto timer = new QLCDNumber(this);
   sidebar->addWidget(timer);
+
+  status = new QLabel(this);
+  status->setText("Connection/New Server to start a new game");
+  sidebar->addWidget(status);
 
   auto resign = new QPushButton("Resign");
   sidebar->addWidget(resign);
@@ -88,4 +100,24 @@ Frame::Frame() : QMainWindow() {
   container->setLayout(main);
   this->setCentralWidget(container);
   this->resize(750, 660);
+
+  auto connMenu = menuBar()->addMenu("Connection");
+  auto newServerAct = new QAction("New &Server");
+  connect(newServerAct, &QAction::triggered, [this]() {
+    this->server = new Server(5858, 60, defaultBoard());
+    connect(this->server, &Server::localSync, [this](Sync s) {
+      // TODO: handle call
+      if(s.has_call()) ;
+      else if(s.has_board()) this->board->updateBoard(s.board());
+      else {
+        this->board->setMovable(this->side == s.side());
+        if(s.side() == RED) this->status->setText("Red moves");
+        else this->status->setText("Black moves");
+      }
+    });
+    qDebug()<<"first sync";
+    this->server->syncBoard();
+    this->server->syncSide();
+  });
+  connMenu->addAction(newServerAct);
 }
