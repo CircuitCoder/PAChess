@@ -5,7 +5,6 @@
 #include <QBoxLayout>
 #include <QPushButton>
 #include <QMenuBar>
-#include <QLCDNumber>
 #include <QTcpSocket>
 #include <QInputDialog>
 
@@ -63,6 +62,9 @@ Board defaultBoard() {
 Frame::Frame() : QMainWindow() {
   this->setWindowTitle("Chess-Chess");
 
+  this->timer = new QTimer(this);
+  this->timer->setInterval(1000);
+
   auto main = new QBoxLayout(QBoxLayout::LeftToRight);
   main->setSpacing(20);
 
@@ -86,8 +88,12 @@ Frame::Frame() : QMainWindow() {
   sidebar->setAlignment(Qt::AlignTop);
   sidebar->setSpacing(10);
 
-  auto timer = new QLCDNumber(this);
-  sidebar->addWidget(timer);
+  timerDisplay = new QLCDNumber(this);
+  sidebar->addWidget(timerDisplay);
+
+  connect(this->timer, &QTimer::timeout, [this]() {
+    this->timerDisplay->display(--this->left);
+  });
 
   status = new QLabel(this);
   status->setText("Connection/New Server to start a new game");
@@ -186,6 +192,7 @@ Frame::Frame() : QMainWindow() {
 void Frame::processSync(Sync s) {
   if(s.has_call()) {
     auto call = s.call();
+    this->timer->stop();
 
     auto msg = new QMessageBox();
 
@@ -221,10 +228,19 @@ void Frame::processSync(Sync s) {
     this->board->setMovable(false);
   } else if(s.has_board()) {
     this->board->updateBoard(s.board());
-    qDebug()<<"Board";
   } else {
     this->board->setMovable(this->side == s.side());
     if(s.side() == RED) this->status->setText("Red moves");
     else this->status->setText("Black moves");
+
+    if(this->side == s.side()) {
+      this->left = 60;
+      this->timerDisplay->display(60);
+      this->timer->start();
+    } else {
+      this->left = 60;
+      this->timerDisplay->display(9999);
+      this->timer->stop();
+    }
   }
 }

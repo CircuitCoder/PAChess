@@ -15,6 +15,16 @@ Server::Server(quint16 port, int timeout, Board init) {
 
   this->timer = new QTimer(this);
   this->timer->setInterval(timeout * 1000);
+  connect(this->timer, &QTimer::timeout, [this]() {
+    Sync sync;
+    Call call;
+    call.set_winner(negateSide(this->currentSide));
+    call.set_cause(Call::TIMEOUT);
+    *sync.mutable_call() = call;
+    
+    emit localSync(sync);
+    this->remoteSync(sync);
+  });
 
   this->localSide = RED;
   this->currentSide = RED;
@@ -34,6 +44,8 @@ Server::Server(quint16 port, int timeout, Board init) {
 
     this->syncBoard();
     this->syncSide();
+
+    this->timer->start();
   });
 }
 
@@ -88,6 +100,9 @@ Response Server::apply(Request req, Side side) {
     this->currentSide = negateSide(this->currentSide);
     this->syncSide();
 
+    this->timer->stop();
+    this->timer->start();
+
     resp.set_success(true);
     return resp;
   }
@@ -98,12 +113,8 @@ void Server::syncBoard() {
   shared_lock<shared_mutex> lock(boardMutex);
   Board *b = sync.mutable_board();
 
-  qDebug()<<"Adding";
-
   for(const auto &piece : this->board)
     *b->add_pieces() = piece;
-
-  qDebug()<<"Emitting";
   
   emit localSync(sync);
   this->remoteSync(sync);
@@ -126,10 +137,7 @@ void Server::syncSide() {
 
 void Server::remoteSync(Sync sync) {
   if(!this->remote) return;
-  qDebug()<<"Sending...";
   string str = sync.SerializeAsString();
   this->remote->write(QByteArray::fromStdString(str));
   this->remote->flush();
 }
-
-// TODO: timeout

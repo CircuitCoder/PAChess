@@ -3,6 +3,8 @@
 #include <QMainWindow>
 #include <QLabel>
 #include <QMessageBox>
+#include <QTimer>
+#include <QLCDNumber>
 #include "server/server.h"
 #include "board.h"
 
@@ -22,6 +24,9 @@ class Frame : public QMainWindow {
     bool local;
     bool waiting = false;
     QMessageBox *waitingHint;
+    QTimer *timer;
+    QLCDNumber *timerDisplay;
+    int left = 60;
 
     void processSync(Sync sync);
 };
